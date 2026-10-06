@@ -18,8 +18,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
+JST = timezone(timedelta(hours=9))
 API_BASE = "https://discord.com/api/v10"
 USER_AGENT = "DiscordBot (https://github.com/tomoshou/discord_imgdownloader, 1.0)"
 
@@ -165,9 +166,9 @@ def is_target_attachment(att, include_videos):
 
 
 def snowflake_time(snowflake_id):
-    """Discord の ID から投稿日時を計算する"""
+    """Discord の ID から投稿日時（日本時間）を計算する"""
     ms = (int(snowflake_id) >> 22) + 1420070400000
-    return datetime.fromtimestamp(ms / 1000)
+    return datetime.fromtimestamp(ms / 1000, JST)
 
 
 # ---------------------------------------------------------------------------
