@@ -12,9 +12,9 @@ on:
         type: string
         default: ""
       guild_name:
-        description: "対象サーバー名"
+        description: "対象サーバー名（Bot が入っているサーバーが1つだけなら空欄でOK）"
         type: string
-        default: "ともしょうAquarium Group"
+        default: ""
       retention_days:
         description: "ダウンロードしたファイルを GitHub に置いておく日数（1〜90）"
         type: number

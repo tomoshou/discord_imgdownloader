@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 JST = timezone(timedelta(hours=9))
 API_BASE = "https://discord.com/api/v10"
-USER_AGENT = "DiscordBot (https://github.com/tomoshou/discord_imgdownloader, 1.0)"
+USER_AGENT = "DiscordBot (discord-image-downloader, 1.1)"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.ini")
@@ -200,14 +200,23 @@ def find_guild(client, guild_id, guild_name):
             matched = [g for g in guilds if guild_name.strip().lower() in g["name"].lower()]
         if len(matched) == 1:
             return matched[0]
+        if not matched and len(guilds) == 1:
+            log("【注意】「{}」というサーバーは見つかりませんでした。".format(guild_name))
+            log("  Bot が参加しているサーバーは1つだけなので、そちらを使います。")
+            return guilds[0]
 
     if len(guilds) == 1:
         return guilds[0]
 
-    log("【エラー】対象のサーバーを特定できませんでした。Bot が参加しているサーバー：")
+    if guild_name:
+        log("【エラー】「{}」に当てはまるサーバーを1つに絞れませんでした。".format(guild_name))
+    else:
+        log("【エラー】Bot が複数のサーバーに参加しているため、どのサーバーか決められません。")
+    log("  Bot が参加しているサーバー：")
     for g in guilds:
         log("   - {}  (ID: {})".format(g["name"], g["id"]))
-    log("config.ini の GUILD_NAME か GUILD_ID を正しく設定してください。")
+    log("この中から対象のサーバー名をコピーして、設定の「サーバー名」（GUILD_NAME）に")
+    log("書いてから、もう一度実行してください。")
     return None
 
 
@@ -395,7 +404,7 @@ def load_config():
     cfg = {
         "token": env_token or s.get("BOT_TOKEN", "").strip(),
         "guild_id": setting("GUILD_ID"),
-        "guild_name": setting("GUILD_NAME", "ともしょうAquarium Group"),
+        "guild_name": setting("GUILD_NAME"),
         "output_dir": setting("OUTPUT_DIR", "downloads") or "downloads",
         "include_videos": parse_bool(setting("INCLUDE_VIDEOS", "false")),
         "channels": parse_channel_filter(setting("CHANNELS")),
