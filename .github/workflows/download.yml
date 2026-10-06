@@ -7,6 +7,10 @@ on:
         description: "動画も保存する"
         type: boolean
         default: false
+      channels:
+        description: "対象チャンネル（空欄なら全部。名前・ID・リンクをカンマ区切りで）"
+        type: string
+        default: ""
       guild_name:
         description: "対象サーバー名"
         type: string
@@ -32,6 +36,7 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           GUILD_NAME: ${{ inputs.guild_name }}
           INCLUDE_VIDEOS: ${{ inputs.include_videos }}
+          CHANNELS: ${{ inputs.channels }}
           OUTPUT_DIR: downloads
         run: |
           if [ -z "$DISCORD_BOT_TOKEN" ]; then

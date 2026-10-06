@@ -211,7 +211,43 @@ def find_guild(client, guild_id, guild_name):
     return None
 
 
-def collect_targets(client, guild_id):
+def normalize_key(text):
+    """名前・ID・リンクの書き方の違いをそろえる"""
+    text = (text or "").strip()
+    m = re.search(r"discord(?:app)?\.com/channels/\d+/(\d+)", text)
+    if m:
+        return m.group(1)  # チャンネルのリンクなら末尾の ID を使う
+    m = re.fullmatch(r"<#(\d+)>", text)
+    if m:
+        return m.group(1)
+    return text.lstrip("#").strip().lower()
+
+
+def parse_channel_filter(value):
+    """「水槽写真, 質問フォーラム」のようなカンマ区切りの指定を一覧にする"""
+    items = re.split(r"[,、，\n]", value or "")
+    return [normalize_key(i) for i in items if normalize_key(i)]
+
+
+def filter_targets(targets, channels, wanted):
+    """指定されたチャンネル（とその中のスレッド・投稿）だけに絞り込む"""
+    selected = [t for t in targets if t["keys"] & set(wanted)]
+    matched = set()
+    for t in selected:
+        matched |= t["keys"] & set(wanted)
+    missing = [w for w in wanted if w not in matched]
+    if missing:
+        log("【注意】次のチャンネルが見つかりませんでした: " + ", ".join(missing))
+        log("  このサーバーにあるチャンネル・フォーラム・カテゴリ：")
+        for c in sorted(channels, key=lambda c: (c.get("type") != CH_CATEGORY, c.get("position", 0))):
+            if c["type"] in MESSAGE_CHANNEL_TYPES | THREAD_PARENT_TYPES | {CH_CATEGORY}:
+                kind = {CH_CATEGORY: "カテゴリ", CH_FORUM: "フォーラム", CH_MEDIA: "メディア"}.get(c["type"], "チャンネル")
+                log("   - {}  [{}]  (ID: {})".format(c["name"], kind, c["id"]))
+        log("")
+    return selected
+
+
+def collect_targets(client, guild_id, wanted=None):
     """メッセージを読む対象（チャンネル＋スレッド）を一覧にする"""
     channels = client.get("/guilds/{}/channels".format(guild_id))
     by_id = {c["id"]: c for c in channels}
@@ -230,10 +266,19 @@ def collect_targets(client, guild_id):
         else:
             folder = safe_name(ch["name"])
             label = "#" + ch["name"]
-        cat = categories.get(ch.get("parent_id") if parent is None else parent.get("parent_id"))
+        cat_id = ch.get("parent_id") if parent is None else parent.get("parent_id")
+        cat = categories.get(cat_id)
         if cat:
             folder = os.path.join(safe_name(cat), folder)
-        targets.append({"id": ch["id"], "label": label, "folder": folder})
+        # 絞り込み用：自分・親チャンネル（フォーラム等）・カテゴリの名前と ID
+        keys = {ch["id"], normalize_key(ch.get("name"))}
+        if parent is not None:
+            keys |= {parent.get("id"), normalize_key(parent.get("name"))}
+        if cat:
+            keys |= {cat_id, normalize_key(cat)}
+        keys.discard(None)
+        keys.discard("")
+        targets.append({"id": ch["id"], "label": label, "folder": folder, "keys": keys})
 
     for ch in sorted(channels, key=lambda c: c.get("position", 0)):
         if ch["type"] in MESSAGE_CHANNEL_TYPES:
@@ -270,6 +315,8 @@ def collect_targets(client, guild_id):
                 before = threads[-1].get("thread_metadata", {}).get("archive_timestamp")
                 if not before:
                     break
+    if wanted:
+        targets = filter_targets(targets, channels, wanted)
     return targets
 
 
@@ -351,6 +398,7 @@ def load_config():
         "guild_name": setting("GUILD_NAME", "ともしょうAquarium Group"),
         "output_dir": setting("OUTPUT_DIR", "downloads") or "downloads",
         "include_videos": parse_bool(setting("INCLUDE_VIDEOS", "false")),
+        "channels": parse_channel_filter(setting("CHANNELS")),
     }
     if not cfg["token"] or "ここに" in cfg["token"]:
         log("【エラー】config.ini の BOT_TOKEN にトークンが書かれていません。")
@@ -391,8 +439,15 @@ def main():
     log("保存先: {}".format(out_root))
     log("")
 
+    if cfg["channels"]:
+        log("指定されたチャンネルだけを対象にします: " + ", ".join(cfg["channels"]))
+    else:
+        log("すべてのチャンネルを対象にします")
     log("チャンネルとスレッドの一覧を取得しています...")
-    targets = collect_targets(client, guild["id"])
+    targets = collect_targets(client, guild["id"], cfg["channels"])
+    if not targets:
+        log("【エラー】対象のチャンネルがありません。指定した名前を確認してください。")
+        return 1
     log("対象: {} 個のチャンネル／スレッド".format(len(targets)))
     log("")
 

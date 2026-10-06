@@ -54,6 +54,8 @@ cells = [
     code("#@title ② 設定（必要なら書き換えてから ▶ を押してください）\n"
          'サーバー名 = "ともしょうAquarium Group"  #@param {type:"string"}\n'
          'サーバーID = ""  #@param {type:"string"}\n'
+         '#@markdown 対象チャンネル：空欄なら全部。名前・ID・リンクをカンマ（,）区切りで。フォーラムを指定すると中の投稿も全部対象\n'
+         '対象チャンネル = ""  #@param {type:"string"}\n'
          'ドライブの保存先フォルダ = "Discord画像"  #@param {type:"string"}\n'
          "動画も保存する = False  #@param {type:\"boolean\"}\n"
          'print("設定しました。")', form=True),
@@ -77,6 +79,7 @@ cells = [
          "os.environ['DISCORD_BOT_TOKEN'] = token\n"
          "os.environ['GUILD_NAME'] = サーバー名\n"
          "os.environ['GUILD_ID'] = サーバーID\n"
+         "os.environ['CHANNELS'] = 対象チャンネル\n"
          "os.environ['INCLUDE_VIDEOS'] = 'true' if 動画も保存する else 'false'\n"
          "os.environ['OUTPUT_DIR'] = os.path.join('/content/drive/MyDrive', ドライブの保存先フォルダ)\n"
          "\n"
