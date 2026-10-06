@@ -325,21 +325,31 @@ def process_channel(client, target, out_root, include_videos, stats):
 
 
 def load_config():
-    if not os.path.exists(CONFIG_PATH):
+    # 環境変数（GitHub Actions の Secrets など）があればそちらを優先する
+    env_token = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
+    if not os.path.exists(CONFIG_PATH) and not env_token:
         log("【エラー】config.ini が見つかりません。")
         log("config.example.ini をコピーして config.ini という名前にし、トークンを書き込んでください。")
         return None
-    cp = configparser.ConfigParser()
-    # メモ帳で保存した UTF-8（BOM 付き）にも対応
-    with open(CONFIG_PATH, encoding="utf-8-sig") as f:
-        cp.read_file(f)
-    s = cp["settings"] if cp.has_section("settings") else {}
+    s = {}
+    if os.path.exists(CONFIG_PATH):
+        cp = configparser.ConfigParser()
+        # メモ帳で保存した UTF-8（BOM 付き）にも対応
+        with open(CONFIG_PATH, encoding="utf-8-sig") as f:
+            cp.read_file(f)
+        if cp.has_section("settings"):
+            s = cp["settings"]
+
+    def setting(key, default=""):
+        value = os.environ.get(key, "").strip()
+        return value if value else s.get(key, default).strip()
+
     cfg = {
-        "token": s.get("BOT_TOKEN", "").strip(),
-        "guild_id": s.get("GUILD_ID", "").strip(),
-        "guild_name": s.get("GUILD_NAME", "").strip(),
-        "output_dir": s.get("OUTPUT_DIR", "downloads").strip() or "downloads",
-        "include_videos": parse_bool(s.get("INCLUDE_VIDEOS", "false")),
+        "token": env_token or s.get("BOT_TOKEN", "").strip(),
+        "guild_id": setting("GUILD_ID"),
+        "guild_name": setting("GUILD_NAME", "ともしょうAquarium Group"),
+        "output_dir": setting("OUTPUT_DIR", "downloads") or "downloads",
+        "include_videos": parse_bool(setting("INCLUDE_VIDEOS", "false")),
     }
     if not cfg["token"] or "ここに" in cfg["token"]:
         log("【エラー】config.ini の BOT_TOKEN にトークンが書かれていません。")

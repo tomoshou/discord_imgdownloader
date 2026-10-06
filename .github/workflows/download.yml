@@ -1,0 +1,52 @@
+name: Discord画像ダウンロード
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_videos:
+        description: "動画も保存する"
+        type: boolean
+        default: false
+      guild_name:
+        description: "対象サーバー名"
+        type: string
+        default: "ともしょうAquarium Group"
+      retention_days:
+        description: "ダウンロードしたファイルを GitHub に置いておく日数（1〜90）"
+        type: number
+        default: 7
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 画像をダウンロード
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          GUILD_NAME: ${{ inputs.guild_name }}
+          INCLUDE_VIDEOS: ${{ inputs.include_videos }}
+          OUTPUT_DIR: downloads
+        run: |
+          if [ -z "$DISCORD_BOT_TOKEN" ]; then
+            echo "【エラー】Secrets に DISCORD_BOT_TOKEN が登録されていません。README の手順を確認してください。"
+            exit 1
+          fi
+          python discord_img_downloader.py
+          echo "保存したファイル数: $(find downloads -type f | wc -l)"
+          du -sh downloads || true
+
+      - name: ダウンロード結果をアップロード
+        uses: actions/upload-artifact@v4
+        with:
+          name: discord-images
+          path: downloads/
+          retention-days: ${{ inputs.retention_days }}
+          compression-level: 0
+          if-no-files-found: warn
