@@ -18,7 +18,7 @@ Google の無料サービス「Colab」を使って、画像を **Google ドラ�
 
 ### 開き方
 1. 次のリンクを開く：
-   **[Colab でノートブックを開く](https://colab.research.google.com/github/tomoshou/discord_imgdownloader/blob/claude/sweet-johnson-49keqi/colab_downloader.ipynb)**
+   **[Colab でノートブックを開く](https://colab.research.google.com/github/tomoshou/discord_imgdownloader/blob/main/colab_downloader.ipynb)**
 2. このリポジトリは非公開なので、初回は GitHub との連携を求められます。画面の案内に従って許可してください。
    （うまく開けない場合：GitHub で `colab_downloader.ipynb` をダウンロード →
    https://colab.research.google.com/ の「ノートブックをアップロード」から開く）
